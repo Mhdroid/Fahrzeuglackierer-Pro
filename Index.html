@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prüfungs-App Prototyp</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+        .quiz-container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+        }
+        .frage {
+            font-size: 1.2em;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        .antwort-button {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+            text-align: left;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.2s;
+        }
+        .antwort-button:hover {
+            background-color: #e9e9e9;
+            transform: translateY(-2px);
+        }
+        .antwort-button.korrekt {
+            background-color: #d4edda;
+            color: #155724;
+            border-color: #c3e6cb;
+        }
+        .antwort-button.falsch {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-color: #f5c6cb;
+        }
+        .feedback {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+        .feedback.richtig {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .feedback.falsch {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .naechste-frage-button {
+            display: none;
+            width: 100%;
+            padding: 15px;
+            margin-top: 20px;
+            border: none;
+            border-radius: 8px;
+            background-color: #007bff;
+            color: white;
+            font-size: 1.1em;
+            cursor: pointer;
+        }
+        #freitext-antwort {
+            width: 100%;
+            min-height: 150px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-top: 10px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+
+<div class="quiz-container">
+    <h2 class="frage" id="frage-text"></h2>
+    <div id="antworten-container"></div>
+    <div class="feedback" id="feedback-text"></div>
+    <button class="naechste-frage-button" id="naechste-frage-button">Nächste Frage</button>
+</div>
+
+<script>
+    const fragen = [
+      {
+        "typ": "multiplechoice",
+        "frage": "Welche Vorgehensweise ist bei der Beseitigung von Rostblüten auf einer lackierten Karosserie am wirkungsvollsten?",
+        "antworten": [
+          "Den Rost mit einem Rostumwandler behandeln und überlackieren.",
+          "Den Rost gründlich abschleifen, die Stelle mit einem Rostschutzprimer behandeln und dann lackieren.",
+          "Die Roststelle mit einem feinen Schleifpapier leicht anschleifen und mit Klarlack überlackieren.",
+          "Den Rost mit einer Drahtbürste entfernen und mit einer Dickschichtspachtel abdecken."
+        ],
+        "korrekteAntwortIndex": 1,
+        "erklaerung": "Um Rostblüten dauerhaft zu beseitigen, muss der Rost vollständig entfernt werden. Danach muss ein Rostschutzprimer aufgetragen werden, um neuen Rost zu verhindern. Erst dann kann die Stelle lackiert werden."
+      },
+      {
+        "typ": "freitext",
+        "frage": "Beschreibe die wichtigsten Sicherheitsvorkehrungen bei der Arbeit mit Lacken und Lösemitteln.",
+        "musterantwort": "Beim Umgang mit Lacken und Lösemitteln müssen Schutzausrüstungen wie Schutzbrille, Handschuhe und Atemschutzmaske getragen werden. Der Arbeitsbereich muss gut belüftet sein, um das Einatmen schädlicher Dämpfe zu verhindern. Außerdem müssen die Stoffe sachgerecht gelagert und entsorgt werden.",
+        "schluesselwoerter": ["Schutzausrüstung", "Schutzbrille", "Handschuhe", "Atemschutzmaske", "belüftet", "Dämpfe", "sachgerecht lagern", "entsorgen"]
+      },
+      {
+        "typ": "multiplechoice",
+        "frage": "Welches Werkzeug eignet sich am besten zum Entfernen von Altlacken auf metallischen Oberflächen?",
+        "antworten": [
+          "Ein feines Schleifvlies.",
+          "Ein Heißluftfön mit einer Spachtel.",
+          "Eine Drahtbürste.",
+          "Eine Rolle und Pinsel."
+        ],
+        "korrekteAntwortIndex": 1,
+        "erklaerung": "Ein Heißluftfön in Kombination mit einer Spachtel ermöglicht es, den Altlack zu erhitzen und ihn leichter abzukratzen, ohne die Oberfläche zu stark zu beschädigen."
+      }
+    ];
+
+    let aktuelleFrageIndex = 0;
+
+    const frageTextElement = document.getElementById('frage-text');
+    const antwortenContainer = document.getElementById('antworten-container');
+    const feedbackTextElement = document.getElementById('feedback-text');
+    const naechsteFrageButton = document.getElementById('naechste-frage-button');
+
+    function zeigeFrage(frageIndex) {
+        antwortenContainer.innerHTML = '';
+        feedbackTextElement.style.display = 'none';
+        naechsteFrageButton.style.display = 'none';
+        
+        const frage = fragen[frageIndex];
+        frageTextElement.textContent = frage.frage;
+
+        if (frage.typ === "multiplechoice") {
+            frage.antworten.forEach((antwort, index) => {
+                const button = document.createElement('button');
+                button.classList.add('antwort-button');
+                button.textContent = antwort;
+                button.addEventListener('click', () => pruefeAntwort(index, frage));
+                antwortenContainer.appendChild(button);
+            });
+        } else if (frage.typ === "freitext") {
+            const inputHtml = `
+                <textarea id="freitext-antwort" placeholder="Deine Antwort hier..."></textarea>
+                <button class="antwort-button" id="freitext-absenden">Antwort absenden</button>
+            `;
+            antwortenContainer.innerHTML = inputHtml;
+            document.getElementById('freitext-absenden').addEventListener('click', () => {
+                const textAntwort = document.getElementById('freitext-antwort').value;
+                pruefeFreitextAntwort(textAntwort, frage);
+            });
+        }
+    }
+
+    function pruefeAntwort(ausgewaehlterIndex, frage) {
+        const alleButtons = antwortenContainer.querySelectorAll('.antwort-button');
+        alleButtons.forEach(btn => btn.removeEventListener('click', pruefeAntwort));
+
+        if (ausgewaehlterIndex === frage.korrekteAntwortIndex) {
+            alleButtons[ausgewaehlterIndex].classList.add('korrekt');
+            feedbackTextElement.textContent = '✅ Richtig!';
+            feedbackTextElement.classList.add('richtig');
+            feedbackTextElement.classList.remove('falsch');
+        } else {
+            alleButtons[ausgewaehlterIndex].classList.add('falsch');
+            alleButtons[frage.korrekteAntwortIndex].classList.add('korrekt');
+            feedbackTextElement.textContent = '❌ Falsch. ' + frage.erklaerung;
+            feedbackTextElement.classList.add('falsch');
+            feedbackTextElement.classList.remove('richtig');
+        }
+        
+        feedbackTextElement.style.display = 'block';
+        naechsteFrageButton.style.display = 'block';
+    }
+
+    function pruefeFreitextAntwort(antwort, frage) {
+        const antwortKlein = antwort.toLowerCase();
+        let treffer = 0;
+        frage.schluesselwoerter.forEach(wort => {
+            if (antwortKlein.includes(wort.toLowerCase())) {
+                treffer++;
+            }
+        });
+
+        const prozentTreffer = (treffer / frage.schluesselwoerter.length) * 100;
+        
+        let feedbackText;
+        if (prozentTreffer >= 60) {
+            feedbackTextElement.classList.add('richtig');
+            feedbackTextElement.classList.remove('falsch');
+            feedbackText = `✅ Gut gemacht! Du hast ${treffer} von ${frage.schluesselwoerter.length} Schlüsselwörtern verwendet.`;
+        } else {
+            feedbackTextElement.classList.add('falsch');
+            feedbackTextElement.classList.remove('richtig');
+            feedbackText = `❌ Leider fehlen einige wichtige Punkte. Du hast nur ${treffer} von ${frage.schluesselwoerter.length} Schlüsselwörtern verwendet. Die Musterantwort lautet: ${frage.musterantwort}`;
+        }
+        
+        feedbackTextElement.textContent = feedbackText;
+        feedbackTextElement.style.display = 'block';
+        naechsteFrageButton.style.display = 'block';
+    }
+
+    naechsteFrageButton.addEventListener('click', () => {
+        aktuelleFrageIndex++;
+        if (aktuelleFrageIndex < fragen.length) {
+            zeigeFrage(aktuelleFrageIndex);
+        } else {
+            frageTextElement.textContent = 'Quiz beendet!';
+            antwortenContainer.innerHTML = '';
+            feedbackTextElement.style.display = 'none';
+            naechsteFrageButton.style.display = 'none';
+        }
+    });
+
+    zeigeFrage(aktuelleFrageIndex);
+</script>
+
+</body>
+</html>
